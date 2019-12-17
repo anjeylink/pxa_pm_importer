@@ -1,4 +1,4 @@
-sources:
+source:
   Pixelant\PxaPmImporter\Service\Source\CsvSource:
     skipRows: 1
     delimiter: ,

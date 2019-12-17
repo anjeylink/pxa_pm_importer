@@ -3,16 +3,16 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaPmImporter\Service;
 
-use Pixelant\PxaPmImporter\Context\ImportContext;
+use Pixelant\PxaPmImporter\Domain\Model\Import;
+use Pixelant\PxaPmImporter\Domain\Repository\ImportRepository;
 use Pixelant\PxaPmImporter\Exception\InvalidConfigurationSourceException;
 use Pixelant\PxaPmImporter\Logging\Logger;
-use Pixelant\PxaPmImporter\Service\Configuration\ConfigurationServiceFactory;
 use Pixelant\PxaPmImporter\Service\Importer\ImporterInterface;
-use Pixelant\PxaPmImporter\Service\Source\SourceFactory;
 use Pixelant\PxaPmImporter\Service\Source\SourceInterface;
 use Pixelant\PxaPmImporter\Traits\EmitSignalTrait;
 use Pixelant\PxaPmImporter\Utility\MainUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Extbase\Persistence\RepositoryInterface;
 
 /**
  * Class Importer
@@ -23,97 +23,73 @@ class ImportManager
     use EmitSignalTrait;
 
     /**
+     * @var ImportRepository
+     */
+    protected $importRepository = null;
+
+    /**
      * @var Logger
      */
     protected $logger = null;
 
     /**
-     * @var ImportContext
+     * Initialize
+     *
+     * @param RepositoryInterface $repository
      */
-    protected $context = null;
-
-    /**
-     * @var SourceFactory
-     */
-    protected $sourceFactory = null;
-
-    /**
-     * ImportManager constructor.
-     * @param SourceFactory $sourceFactory
-     */
-    public function __construct(SourceFactory $sourceFactory)
+    public function __construct(RepositoryInterface $repository)
     {
-        $this->sourceFactory = $sourceFactory;
-    }
-
-    /**
-     * @param ImportContext $context
-     */
-    public function injectContext(ImportContext $context)
-    {
-        $this->context = $context;
+        $this->importRepository = $repository;
     }
 
     /**
      * Execute logic for single import
      *
-     * @param string $configuration
+     * @param Import $import
      */
-    public function execute(string $configuration): void
+    public function execute(Import $import): void
     {
-        $this->boot($configuration);
+        $this->initLogger($import);
 
-        $this->emitSignal(__CLASS__, 'beforeImportExecute', [$configuration]);
+        $this->emitSignal('beforeImportExecute', [$import]);
 
-        $sources = $this->context->getConfigurationService()->getSourcesConfiguration();
-        $importers = $this->context->getConfigurationService()->getImportersConfiguration();
-        $multipleSources = count($sources) > 1;
+        $source = $this->resolveImportSource($import);
+        $importersConfiguration = $import->getConfigurationService()->getImportersConfiguration();
 
-        // Run import for every source
-        foreach ($sources as $source) {
-            $sourceInstance = $this->sourceFactory->createSource($source);
-
-            // Run importers for each source
-            foreach ($importers as $importerClass => $singleImporterConfiguration) {
-                /** @var ImporterInterface $importer */
-                $importer = GeneralUtility::makeInstance($importerClass, $this->logger);
-                if (!($importer instanceof ImporterInterface)) {
-                    // @codingStandardsIgnoreStart
-                    throw new \UnexpectedValueException('Class "' . $importerClass . '" should be instance of ImporterInterface', 1536044275945);
-                    // @codingStandardsIgnoreEnd
-                }
-
-                // Write to log about import start
-                $this->logger->info(sprintf(
-                    'Start import using source "%s", at %s',
-                    $source,
-                    date('G-i-s')
-                ));
-
-                $startTime = time();
-                $importer->preImport($source, $singleImporterConfiguration);
-                $importer->start($source, $singleImporterConfiguration);
-                $importer->postImport();
-
-                $this->logger->info('Memory usage "' . MainUtility::getMemoryUsage() . '"');
-                $this->logger->info('Import duration - ' . $this->getDurationTime($startTime));
-
-                // Log info about import end
-                $this->logger->info(sprintf(
-                    'End import using source "%s", at %s',
-                    $source,
-                    date('G-i-s')
-                ));
+        foreach ($importersConfiguration as $importerClass => $singleImporterConfiguration) {
+            /** @var ImporterInterface $importer */
+            $importer = GeneralUtility::makeInstance($importerClass, $this->logger);
+            if (!($importer instanceof ImporterInterface)) {
+                // @codingStandardsIgnoreStart
+                throw new \UnexpectedValueException('Class "' . $importerClass . '" should be instance of ImporterInterface', 1536044275945);
+                // @codingStandardsIgnoreEnd
             }
+
+            // Write to log about import start
+            $this->logger->info(sprintf(
+                'Start import for import configuration "%s" with UID - %d, at %s',
+                $import->getName(),
+                $import->getUid(),
+                date('G-i-s')
+            ));
+
+            $startTime = time();
+            $importer->preImport($source, $import, $singleImporterConfiguration);
+            $importer->start($source, $import, $singleImporterConfiguration);
+            $importer->postImport($import);
+
+            // Log info about import end
+            $this->logger->info(sprintf(
+                'End import for import configuration "%s" with UID - %d, at %s',
+                $import->getName(),
+                $import->getUid(),
+                date('G-i-s')
+            ));
+            $this->logger->info('Memory usage "' . MainUtility::getMemoryUsage() . '"');
+            $this->logger->info('Import duration - ' . $this->getDurationTime($startTime));
         }
 
-        if ($multipleSources) {
-            $this->logger->info(
-                'Full import duration - ' . $this->getDurationTime($this->context->getImportStartTimeStamp())
-            );
-        }
-
-        $this->emitSignal(__CLASS__, 'afterImportExecute', [$configuration]);
+        $this->emitSignal('afterImportExecute', [$import]);
     }
 
     /**
@@ -153,35 +129,41 @@ class ImportManager
     }
 
     /**
-     * Boot before start import
+     * Resolve source
+     * @TODO can we have multiple sources ???
      *
-     * @param string $configurationSource
+     * @param Import $import
+     * @return SourceInterface
      */
-    protected function boot(string $configurationSource): void
+    protected function resolveImportSource(Import $import): SourceInterface
     {
-        $this->initializeImportConfigurationAndSetInContext($configurationSource);
-        $this->initLogger();
-    }
+        $sourceConfiguration = $import->getConfigurationService()->getSourceConfiguration();
+        foreach ($sourceConfiguration as $sourceClass => $configuration) {
+            /** @var SourceInterface $source */
+            $source = GeneralUtility::makeInstance($sourceClass);
+            if (!($source instanceof SourceInterface)) {
+                // @codingStandardsIgnoreStart
+                throw new \UnexpectedValueException('Class "' . $sourceClass . '" should be instance of SourceInterface', 1536044243356);
+                // @codingStandardsIgnoreEnd
+            }
+            $source->initialize($configuration);
 
-    /**
-     * Initialize import configuration and context
-     *
-     * @param string $configurationSource
-     */
-    protected function initializeImportConfigurationAndSetInContext(string $configurationSource): void
-    {
-        $configurationService = ConfigurationServiceFactory::getConfiguration($configurationSource);
+            return $source;
+        }
 
-        $this->context->setConfigurationService($configurationService);
-        $this->context->setImportConfigurationSource($configurationSource);
+        // @codingStandardsIgnoreStart
+        throw new InvalidConfigurationSourceException('It\'s not possible to resolve source in "' . $import->getName() . '" configuration.', 1536043244442);
+        // @codingStandardsIgnoreEnd
     }
 
     /**
      * Init logger with custom path
+     *
+     * @param Import $import
      */
-    protected function initLogger(): void
+    protected function initLogger(Import $import): void
     {
-        $customPath = $this->context->getConfigurationService()->getLogPath();
+        $customPath = $import->getConfigurationService()->getLogCustomPath();
         $this->logger = Logger::getInstance(__CLASS__, $customPath);
     }
 }

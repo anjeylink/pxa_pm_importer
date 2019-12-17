@@ -5,6 +5,7 @@ namespace Pixelant\PxaPmImporter\Service\Configuration;
 
 use Pixelant\PxaPmImporter\Exception\InvalidConfigurationSourceException;
 use Pixelant\PxaPmImporter\Traits\EmitSignalTrait;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Class AbstractConfiguration
@@ -40,18 +41,18 @@ abstract class AbstractConfiguration implements ConfigurationInterface
     }
 
     /**
-     * Sources configuration
+     * Source configuration
      *
      * @return array
      */
-    public function getSourcesConfiguration(): array
+    public function getSourceConfiguration(): array
     {
         $configuration = $this->getConfiguration();
 
-        if (!isset($configuration['sources']) || !is_array($configuration['sources'])) {
-            throw new \UnexpectedValueException('Missing "sources" configuration.', 1538134061217);
+        if (!isset($configuration['source']) || !is_array($configuration['source'])) {
+            throw new \UnexpectedValueException('Configuration expect "source" to be set as array.', 1538134061217);
         }
-        return $configuration['sources'];
+        return $configuration['source'];
     }
 
     /**
@@ -64,7 +65,7 @@ abstract class AbstractConfiguration implements ConfigurationInterface
         $configuration = $this->getConfiguration();
 
         if (!isset($configuration['importers']) || !is_array($configuration['importers'])) {
-            throw new \UnexpectedValueException('Missing "importers" configuration.', 1538134039200);
+            throw new \UnexpectedValueException('Configuration expect "importers" to be set as array.', 1538134039200);
         }
         return $configuration['importers'];
     }
@@ -74,7 +75,7 @@ abstract class AbstractConfiguration implements ConfigurationInterface
      *
      * @return string|null
      */
-    public function getLogPath(): ?string
+    public function getLogCustomPath(): ?string
     {
         $configuration = $this->getConfiguration();
         if (!empty($configuration['log']['path'])) {
@@ -91,11 +92,7 @@ abstract class AbstractConfiguration implements ConfigurationInterface
     {
         if ($this->isSourceValid()) {
             $configuration = $this->parseConfiguration();
-            $this->emitSignal(
-                __CLASS__,
-                'postConfigurationParse',
-                ['configuration' => &$configuration]
-            );
+            $this->emitSignal('postConfigurationParse', [&$configuration]);
 
             $this->configuration = $configuration;
         } else {

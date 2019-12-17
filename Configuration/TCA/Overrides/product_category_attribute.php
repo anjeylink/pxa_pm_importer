@@ -24,8 +24,7 @@ call_user_func(function () {
         'tx_pxaproductmanager_domain_model_attribute',
         'tx_pxaproductmanager_domain_model_product',
         'tx_pxaproductmanager_domain_model_option',
-        'tx_pxaproductmanager_domain_model_attributeset',
-        'sys_category',
+        'sys_category'
     ];
 
     foreach ($importTables as $table) {

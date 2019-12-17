@@ -3,11 +3,15 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaPmImporter\Controller;
 
+use Pixelant\PxaPmImporter\Domain\Model\Import;
+use Pixelant\PxaPmImporter\Domain\Repository\ImportRepository;
+use Pixelant\PxaPmImporter\Exception\InvalidConfigurationException;
 use Pixelant\PxaPmImporter\Service\ImportManager;
-use Pixelant\PxaPmImporter\Utility\ImportersRegistry;
 use TYPO3\CMS\Backend\View\BackendTemplateView;
 use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Page\PageRenderer;
+use TYPO3\CMS\Core\Registry;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
 use TYPO3\CMS\Extbase\Mvc\View\ViewInterface;
 use TYPO3\CMS\Extbase\Utility\LocalizationUtility;
@@ -33,16 +37,16 @@ class ImportModuleController extends ActionController
     protected $defaultViewObjectName = BackendTemplateView::class;
 
     /**
-     * @var PageRenderer
+     * @var ImportRepository
      */
-    protected $pageRenderer = null;
+    protected $importRepository = null;
 
     /**
-     * @param PageRenderer $pageRenderer
+     * @param ImportRepository $importRepository
      */
-    public function injectPageRenderer(PageRenderer $pageRenderer)
+    public function injectImportRepository(ImportRepository $importRepository): void
     {
-        $this->pageRenderer = $pageRenderer;
+        $this->importRepository = $importRepository;
     }
 
     /**
@@ -62,9 +66,9 @@ class ImportModuleController extends ActionController
      */
     public function initializeIndexAction()
     {
-        $this->pageRenderer->loadRequireJsModule(
+        $this->getPageRenderer()->loadRequireJsModule(
             'TYPO3/CMS/PxaPmImporter/Backend/ImportModule',
-            'function(ImportModule) { /*(new ImportModule).init();*/ }'
+            'function(ImportModule) { (new ImportModule).init(); }'
         );
     }
 
@@ -73,36 +77,47 @@ class ImportModuleController extends ActionController
      */
     public function indexAction()
     {
-        $configurations = ImportersRegistry::getImportersAvailableConfigurations();
+        $registry = $this->getRegistry();
+        $lastImportInfo = $registry->get('tx_pxapmimporter', 'lastImport');
+        if (is_array($lastImportInfo)) {
+            $this->view
+                ->assign('errors', $lastImportInfo['errors'])
+                ->assign('logFile', $lastImportInfo['logFile']);
 
-        $this->view->assignMultiple(compact('configurations'));
+            $this->saveLastImportInformation(null); // Save with null
+        }
+
+        $this->view->assign('configurations', $this->importRepository->findAll());
     }
 
     /**
      * Import single configuration
      *
-     * @param string $configuration Import configuration
+     * @param Import $import
      */
-    public function importAction(string $configuration)
+    public function importAction(Import $import = null)
     {
-        $importManager = $this->objectManager->get(ImportManager::class);
+        $importManager = GeneralUtility::makeInstance(ImportManager::class, $this->importRepository);
 
         try {
-            $importManager->execute($configuration);
+            if ($import === null) {
+                // @codingStandardsIgnoreStart
+                throw new InvalidConfigurationException('Could not find configuration', 1535965019611);
+                // @codingStandardsIgnoreEnd
+            }
+
+            $importManager->execute($import);
 
             $this->addFlashMessage(
-                $this->translate('be.executed', [$importManager->getLogFilePath()]),
+                $this->translate('be.executed'),
                 $this->translate('be.success'),
                 FlashMessage::OK
             );
 
-            foreach ($importManager->getErrors() as $error) {
-                $this->addFlashMessage(
-                    $error,
-                    $this->translate('be.error'),
-                    FlashMessage::ERROR
-                );
-            }
+            $this->saveLastImportInformation([
+                'logFile' => $importManager->getLogFilePath(),
+                'errors' => $importManager->getErrors()
+            ]);
         } catch (\Exception $exception) {
             $this->addFlashMessage(
                 $this->translate('be.failed_execution', [$exception->getMessage()]),
@@ -115,6 +130,23 @@ class ImportModuleController extends ActionController
     }
 
     /**
+     * Save last import info
+     * @param array $information
+     */
+    protected function saveLastImportInformation(?array $information): void
+    {
+        $this->getRegistry()->set('tx_pxapmimporter', 'lastImport', $information);
+    }
+
+    /**
+     * @return Registry
+     */
+    protected function getRegistry(): Registry
+    {
+        return GeneralUtility::makeInstance(Registry::class);
+    }
+
+    /**
      * Translate key
      *
      * @param string $key
@@ -124,5 +156,15 @@ class ImportModuleController extends ActionController
     protected function translate(string $key, array $arguments = null): string
     {
         return LocalizationUtility::translate($key, 'PxaPmImporter', $arguments) ?? '';
+    }
+
+    /**
+     * Page renderer
+     *
+     * @return PageRenderer
+     */
+    protected function getPageRenderer(): PageRenderer
+    {
+        return GeneralUtility::makeInstance(PageRenderer::class);
     }
 }

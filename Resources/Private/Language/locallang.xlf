@@ -21,10 +21,13 @@
 			    <source>Success</source>
 			</trans-unit>
 			<trans-unit id="be.executed">
-			    <source>Import executed. Log path "%s"</source>
+			    <source>Import executed.</source>
 			</trans-unit>
 			<trans-unit id="be.error">
 			    <source>Error</source>
+			</trans-unit>
+			<trans-unit id="be.with_errors">
+			    <source>Import was executed with errors.</source>
 			</trans-unit>
 			<trans-unit id="be.check_log">
 			    <source>Full log path</source>

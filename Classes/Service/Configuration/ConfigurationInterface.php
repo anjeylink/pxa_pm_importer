@@ -26,10 +26,10 @@ interface ConfigurationInterface
      *
      * @return array
      */
-    public function getSourcesConfiguration(): array;
+    public function getSourceConfiguration(): array;
 
     /**
-     * Get configuration of importer
+     * Get configuration of source
      *
      * @return array
      */
@@ -40,5 +40,5 @@ interface ConfigurationInterface
      *
      * @return string|null
      */
-    public function getLogPath(): ?string;
+    public function getLogCustomPath(): ?string;
 }

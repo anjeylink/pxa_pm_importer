@@ -130,7 +130,7 @@ class AbstractConfigurationTest extends UnitTestCase
 
         $this->subject->_set('configuration', $configuration);
 
-        $this->assertNull($this->subject->getLogPath());
+        $this->assertNull($this->subject->getLogCustomPath());
     }
 
     /**
@@ -148,6 +148,6 @@ class AbstractConfigurationTest extends UnitTestCase
 
         $this->subject->_set('configuration', $configuration);
 
-        $this->assertEquals($logPath, $this->subject->getLogPath());
+        $this->assertEquals($logPath, $this->subject->getLogCustomPath());
     }
 }
