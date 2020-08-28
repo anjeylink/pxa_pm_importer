@@ -4,14 +4,9 @@ namespace Pixelant\PxaPmImporter\Processors\Relation;
 
 /**
  * @package Pixelant\PxaPmImporter\Processors\Relation
+ * @deprecated Use Pixelant\PxaPmImporter\Processors\Relation\CanCreateMissingEntities instead
  */
-interface AbleCreateMissingEntities
+interface AbleCreateMissingEntities extends CanCreateMissingEntities
 {
-    /**
-     * Create missing entity with import ID
-     *
-     * @param string $importId
-     * @return mixed
-     */
-    public function createMissingEntity(string $importId);
+
 }
