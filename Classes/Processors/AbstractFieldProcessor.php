@@ -6,6 +6,7 @@ namespace Pixelant\PxaPmImporter\Processors;
 use Pixelant\PxaPmImporter\Context\ImportContext;
 use Pixelant\PxaPmImporter\Domain\Repository\ImportRecordRepository;
 use Pixelant\PxaPmImporter\Logging\Logger;
+use Pixelant\PxaPmImporter\Processors\Traits\LanguageAwareProcessor;
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
 use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 
@@ -13,8 +14,10 @@ use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
  * Class AbstractFieldProcessor
  * @package Pixelant\PxaPmImporter\Processors
  */
-abstract class AbstractFieldProcessor implements FieldProcessorInterface
+abstract class AbstractFieldProcessor implements FieldProcessorInterface, LanguageAwareProcessorInterface
 {
+    use LanguageAwareProcessor;
+
     /**
      * Field processing configuration
      *
@@ -57,11 +60,6 @@ abstract class AbstractFieldProcessor implements FieldProcessorInterface
      * @var ImportRecordRepository
      */
     protected $repository = null;
-
-    /**
-     * @var int
-     */
-    protected $languageId = 0;
 
     /**
      * Initialize
