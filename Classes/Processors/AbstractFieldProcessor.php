@@ -6,6 +6,7 @@ namespace Pixelant\PxaPmImporter\Processors;
 use Pixelant\PxaPmImporter\Context\ImportContext;
 use Pixelant\PxaPmImporter\Domain\Repository\ImportRecordRepository;
 use Pixelant\PxaPmImporter\Logging\Logger;
+use Pixelant\PxaPmImporter\Processors\Traits\LanguageAwareProcessor;
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
 use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 
@@ -13,8 +14,10 @@ use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
  * Class AbstractFieldProcessor
  * @package Pixelant\PxaPmImporter\Processors
  */
-abstract class AbstractFieldProcessor implements FieldProcessorInterface
+abstract class AbstractFieldProcessor implements FieldProcessorInterface, LanguageAwareProcessorInterface
 {
+    use LanguageAwareProcessor;
+
     /**
      * Field processing configuration
      *
@@ -113,6 +116,22 @@ abstract class AbstractFieldProcessor implements FieldProcessorInterface
     }
 
     /**
+     * @return int
+     */
+    public function getLanguageId(): int
+    {
+        return $this->languageId;
+    }
+
+    /**
+     * @param int $languageId
+     */
+    public function setLanguageId(int $languageId)
+    {
+        $this->languageId = $languageId;
+    }
+
+    /**
      * Set entity properties like strings, numbers, etc..
      *
      * @param $value
@@ -136,6 +155,10 @@ abstract class AbstractFieldProcessor implements FieldProcessorInterface
      */
     protected function findRecordByImportIdentifier(string $identifier, string $table, int $language = 0): ?array
     {
+        if ($language === 0) {
+            $language = $this->languageId;
+        }
+
         return $this->repository->findByImportId($identifier, $table, $language);
     }
 }

@@ -11,6 +11,7 @@ use Pixelant\PxaPmImporter\Exception\Importer\LocalizationImpossibleException;
 use Pixelant\PxaPmImporter\Exception\MissingImportField;
 use Pixelant\PxaPmImporter\Logging\Logger;
 use Pixelant\PxaPmImporter\Processors\FieldProcessorInterface;
+use Pixelant\PxaPmImporter\Processors\LanguageAwareProcessorInterface;
 use Pixelant\PxaPmImporter\Processors\PreProcessorInterface;
 use Pixelant\PxaPmImporter\Service\Cache\CacheService;
 use Pixelant\PxaPmImporter\Source\SourceInterface;
@@ -101,6 +102,13 @@ class Importer implements ImporterInterface
      * @var string
      */
     protected $identifier = 'id';
+
+    /**
+     * The language UID currently being imported
+     *
+     * @var int
+     */
+    protected $activeImportLanguageId = 0;
 
     /**
      * By default all operations are allowed
@@ -617,6 +625,11 @@ class Importer implements ImporterInterface
             // If processor is set, it should set value for model property
             if (!empty($mapping['processor'])) {
                 $processor = $this->createProcessor($mapping);
+
+                if ($processor instanceof LanguageAwareProcessorInterface) {
+                    $processor->setLanguageId($this->activeImportLanguageId);
+                }
+
                 $processor->init($entity, $record, $property, $mapping['configuration']);
 
                 if ($processor instanceof PreProcessorInterface) {
@@ -810,8 +823,11 @@ class Importer implements ImporterInterface
         $languages = $this->adapter->getImportLanguages();
 
         foreach ($languages as $language) {
+            $this->activeImportLanguageId = $language;
+
             // Reset duplicated identifiers for each language
             $this->identifiers = [];
+
             // One row per record
             foreach ($this->source as $key => $rawRow) {
                 // Update progress on every iteration

@@ -63,7 +63,7 @@ abstract class AbstractRelationFieldProcessor extends AbstractFieldProcessor
                 // If not uid find by import hash
                 $record = $this->findRecordByImportIdentifier($identifier, $table);
                 // If nothing found try to create?
-                if ($record === null && $this instanceof AbleCreateMissingEntities) {
+                if ($record === null && $this instanceof CanCreateMissingEntities) {
                     $this->createMissingEntity($identifier);
                     $record = $this->findRecordByImportIdentifier($identifier, $table);
                 }

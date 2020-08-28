@@ -9,7 +9,7 @@ use Pixelant\PxaProductManager\Domain\Model\Option;
  * Class AttributeOptionsProcessor
  * @package Pixelant\PxaPmImporter\Processors\Relation
  */
-class AttributeOptionsProcessor extends AbstractRelationFieldProcessor implements AbleCreateMissingEntities
+class AttributeOptionsProcessor extends AbstractRelationFieldProcessor implements CanCreateMissingEntities
 {
     /**
      * If not found create one
@@ -26,7 +26,7 @@ class AttributeOptionsProcessor extends AbstractRelationFieldProcessor implement
         $this->repository->createEmpty(
             $identifier,
             'tx_pxaproductmanager_domain_model_option',
-            0,
+            $this->getLanguageId(),
             $this->newRecordFieldsWithPlaceHolder($fields)
         );
     }

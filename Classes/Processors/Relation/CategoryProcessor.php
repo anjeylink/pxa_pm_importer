@@ -9,7 +9,7 @@ use Pixelant\PxaProductManager\Domain\Model\Category;
  * Class CategoryProcessor
  * @package Pixelant\PxaPmImporter\Processors
  */
-class CategoryProcessor extends AbstractRelationFieldProcessor implements AbleCreateMissingEntities
+class CategoryProcessor extends AbstractRelationFieldProcessor implements CanCreateMissingEntities
 {
     /**
      * @inheritDoc
@@ -17,12 +17,11 @@ class CategoryProcessor extends AbstractRelationFieldProcessor implements AbleCr
     public function createMissingEntity(string $importId)
     {
         $fields = ['title' => $importId, $this->tcaHiddenField() => 1];
-        $sysLanguageUid = 0;
 
         $this->repository->createEmpty(
             $importId,
             'sys_category',
-            $sysLanguageUid,
+            $this->getLanguageId(),
             $this->newRecordFieldsWithPlaceHolder($fields)
         );
     }
