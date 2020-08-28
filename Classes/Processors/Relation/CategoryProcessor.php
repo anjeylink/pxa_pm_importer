@@ -9,7 +9,7 @@ use Pixelant\PxaProductManager\Domain\Model\Category;
  * Class CategoryProcessor
  * @package Pixelant\PxaPmImporter\Processors
  */
-class CategoryProcessor extends AbstractRelationFieldProcessor implements AbleCreateMissingEntities
+class CategoryProcessor extends AbstractRelationFieldProcessor implements CanCreateMissingEntities
 {
     /**
      * @inheritDoc

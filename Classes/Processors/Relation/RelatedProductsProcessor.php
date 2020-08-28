@@ -9,7 +9,7 @@ use Pixelant\PxaProductManager\Domain\Model\Product;
  * Class RelatedProductsProcessor
  * @package Pixelant\PxaPmImporter\Processors
  */
-class RelatedProductsProcessor extends AbstractRelationFieldProcessor implements AbleCreateMissingEntities
+class RelatedProductsProcessor extends AbstractRelationFieldProcessor implements CanCreateMissingEntities
 {
     /**
      * @inheritDoc
