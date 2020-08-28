@@ -59,6 +59,11 @@ abstract class AbstractFieldProcessor implements FieldProcessorInterface
     protected $repository = null;
 
     /**
+     * @var int
+     */
+    protected $languageId = 0;
+
+    /**
      * Initialize
      */
     public function initializeObject()
@@ -113,6 +118,22 @@ abstract class AbstractFieldProcessor implements FieldProcessorInterface
     }
 
     /**
+     * @return int
+     */
+    public function getLanguageId(): int
+    {
+        return $this->languageId;
+    }
+
+    /**
+     * @param int $languageId
+     */
+    public function setLanguageId(int $languageId)
+    {
+        $this->languageId = $languageId;
+    }
+
+    /**
      * Set entity properties like strings, numbers, etc..
      *
      * @param $value
@@ -136,6 +157,10 @@ abstract class AbstractFieldProcessor implements FieldProcessorInterface
      */
     protected function findRecordByImportIdentifier(string $identifier, string $table, int $language = 0): ?array
     {
+        if ($language === 0) {
+            $language = $this->languageId;
+        }
+
         return $this->repository->findByImportId($identifier, $table, $language);
     }
 }

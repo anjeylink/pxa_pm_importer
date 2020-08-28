@@ -24,7 +24,7 @@ class RelatedProductsProcessor extends AbstractRelationFieldProcessor implements
         $this->repository->createEmpty(
             $importId,
             'tx_pxaproductmanager_domain_model_product',
-            0,
+            $this->getLanguageId(),
             $this->newRecordFieldsWithPlaceHolder($fields)
         );
     }

@@ -26,7 +26,7 @@ class AttributeOptionsProcessor extends AbstractRelationFieldProcessor implement
         $this->repository->createEmpty(
             $identifier,
             'tx_pxaproductmanager_domain_model_option',
-            0,
+            $this->getLanguageId(),
             $this->newRecordFieldsWithPlaceHolder($fields)
         );
     }
